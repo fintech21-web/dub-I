@@ -1,4 +1,5 @@
 import os
+import asyncio
 import logging
 from flask import Flask, request
 from telegram import Update
@@ -23,7 +24,6 @@ telegram_app = Application.builder().token(BOT_TOKEN).build()
 
 user_data_store = {}
 
-
 # ---------------- HANDLERS ---------------- #
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -32,10 +32,10 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     await update.message.reply_text(
         "🎓 Training Registration\n\n"
-        "1️⃣ Pay the registration fee\n"
-        "2️⃣ Send your FULL NAME\n"
-        "3️⃣ Send your PHONE NUMBER\n"
-        "4️⃣ Send payment receipt photo\n\n"
+        "1️⃣ Pay registration fee\n"
+        "2️⃣ Send FULL NAME\n"
+        "3️⃣ Send PHONE NUMBER\n"
+        "4️⃣ Send receipt photo\n\n"
         "Send your FULL NAME now."
     )
 
@@ -93,8 +93,7 @@ telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 telegram_app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
-
-# ---------------- WEBHOOK ROUTES ---------------- #
+# ---------------- WEBHOOK ---------------- #
 
 @app.route("/")
 def home():
@@ -102,17 +101,16 @@ def home():
 
 
 @app.route("/webhook", methods=["POST"])
-async def webhook():
+def webhook():
     update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-    await telegram_app.process_update(update)
+    asyncio.run(telegram_app.process_update(update))
     return "OK"
 
 
 # ---------------- STARTUP ---------------- #
 
-@app.before_first_request
-async def startup():
+async def setup():
     await telegram_app.initialize()
     await telegram_app.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
-
+asyncio.run(setup())
