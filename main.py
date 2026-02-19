@@ -11,7 +11,7 @@ from telegram.ext import (
     filters,
 )
 
-# ---------------- ENV VARIABLES ---------------- #
+# ---------------- ENV ---------------- #
 
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = int(os.environ["ADMIN_ID"])
@@ -20,14 +20,17 @@ WEBHOOK_URL = os.environ["WEBHOOK_URL"]
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
+
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
-# Temporary memory storage
+# Create ONE global event loop
+loop = asyncio.new_event_loop()
+asyncio.set_event_loop(loop)
+
 user_data_store = {}
 
 # ---------------- HANDLERS ---------------- #
 
-# /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_data_store[user_id] = {}
@@ -41,15 +44,11 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "Send your FULL NAME now."
     )
 
-
-# /id command (ADMIN ID CHECK)
 async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         f"Your Telegram ID is: {update.effective_user.id}"
     )
 
-
-# Handle text (name & phone)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
@@ -68,8 +67,6 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Now send receipt PHOTO.")
         return
 
-
-# Handle receipt photo
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
@@ -82,7 +79,7 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Send name and phone first.")
         return
 
-    caption_text = (
+    caption = (
         "📥 New Registration\n\n"
         f"👤 Name: {data['name']}\n"
         f"📞 Phone: {data['phone']}\n"
@@ -90,29 +87,17 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
     try:
-        # Send details message
-        await context.bot.send_message(
-            chat_id=ADMIN_ID,
-            text=caption_text
-        )
-
-        # Send receipt photo
-        photo = update.message.photo[-1]
         await context.bot.send_photo(
             chat_id=ADMIN_ID,
-            photo=photo.file_id,
-            caption="🧾 Payment Receipt"
+            photo=update.message.photo[-1].file_id,
+            caption=caption
         )
 
         await update.message.reply_text("✅ Registration submitted successfully.")
-
-        # Clear user data
         del user_data_store[user_id]
 
     except Exception as e:
         logging.error(f"Error sending to admin: {e}")
-        await update.message.reply_text("❌ Error sending receipt. Contact admin.")
-
 
 # ---------------- ADD HANDLERS ---------------- #
 
@@ -130,7 +115,7 @@ def home():
 @app.route("/webhook", methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), telegram_app.bot)
-    asyncio.run(telegram_app.process_update(update))
+    loop.run_until_complete(telegram_app.process_update(update))
     return "OK"
 
 # ---------------- STARTUP ---------------- #
@@ -139,4 +124,4 @@ async def setup():
     await telegram_app.initialize()
     await telegram_app.bot.set_webhook(f"{WEBHOOK_URL}/webhook")
 
-asyncio.run(setup())
+loop.run_until_complete(setup())
