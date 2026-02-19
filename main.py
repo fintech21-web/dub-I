@@ -11,7 +11,8 @@ from telegram.ext import (
     filters,
 )
 
-# Environment variables
+# ---------------- ENV VARIABLES ---------------- #
+
 BOT_TOKEN = os.environ["BOT_TOKEN"]
 ADMIN_ID = int(os.environ["ADMIN_ID"])
 WEBHOOK_URL = os.environ["WEBHOOK_URL"]
@@ -19,13 +20,14 @@ WEBHOOK_URL = os.environ["WEBHOOK_URL"]
 logging.basicConfig(level=logging.INFO)
 
 app = Flask(__name__)
-
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
+# Temporary memory storage
 user_data_store = {}
 
 # ---------------- HANDLERS ---------------- #
 
+# /start command
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     user_data_store[user_id] = {}
@@ -40,6 +42,14 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+# /id command (ADMIN ID CHECK)
+async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        f"Your Telegram ID is: {update.effective_user.id}"
+    )
+
+
+# Handle text (name & phone)
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
     text = update.message.text
@@ -59,6 +69,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
 
+# Handle receipt photo
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user_id = update.effective_user.id
 
@@ -71,25 +82,42 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text("Send name and phone first.")
         return
 
-    photo = update.message.photo[-1]
-
-    await context.bot.send_message(
-        chat_id=ADMIN_ID,
-        text=f"📥 New Registration\n\nName: {data['name']}\nPhone: {data['phone']}\nUser ID: {user_id}"
+    caption_text = (
+        "📥 New Registration\n\n"
+        f"👤 Name: {data['name']}\n"
+        f"📞 Phone: {data['phone']}\n"
+        f"🆔 Telegram ID: {user_id}"
     )
 
-    await context.bot.send_photo(
-        chat_id=ADMIN_ID,
-        photo=photo.file_id,
-        caption="Payment Receipt"
-    )
+    try:
+        # Send details message
+        await context.bot.send_message(
+            chat_id=ADMIN_ID,
+            text=caption_text
+        )
 
-    await update.message.reply_text("✅ Registration submitted.")
+        # Send receipt photo
+        photo = update.message.photo[-1]
+        await context.bot.send_photo(
+            chat_id=ADMIN_ID,
+            photo=photo.file_id,
+            caption="🧾 Payment Receipt"
+        )
 
-    del user_data_store[user_id]
+        await update.message.reply_text("✅ Registration submitted successfully.")
 
+        # Clear user data
+        del user_data_store[user_id]
+
+    except Exception as e:
+        logging.error(f"Error sending to admin: {e}")
+        await update.message.reply_text("❌ Error sending receipt. Contact admin.")
+
+
+# ---------------- ADD HANDLERS ---------------- #
 
 telegram_app.add_handler(CommandHandler("start", start))
+telegram_app.add_handler(CommandHandler("id", get_id))
 telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 telegram_app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
@@ -99,13 +127,11 @@ telegram_app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 def home():
     return "Bot is running"
 
-
 @app.route("/webhook", methods=["POST"])
 def webhook():
     update = Update.de_json(request.get_json(force=True), telegram_app.bot)
     asyncio.run(telegram_app.process_update(update))
     return "OK"
-
 
 # ---------------- STARTUP ---------------- #
 
