@@ -2,11 +2,16 @@ import os
 import asyncio
 import logging
 from flask import Flask, request
-from telegram import Update
+from telegram import (
+    Update,
+    InlineKeyboardButton,
+    InlineKeyboardMarkup
+)
 from telegram.ext import (
     Application,
     CommandHandler,
     MessageHandler,
+    CallbackQueryHandler,
     ContextTypes,
     filters,
 )
@@ -23,66 +28,83 @@ app = Flask(__name__)
 
 telegram_app = Application.builder().token(BOT_TOKEN).build()
 
-# Create ONE global event loop
 loop = asyncio.new_event_loop()
 asyncio.set_event_loop(loop)
 
-user_data_store = {}
+# ---------------- CONFIG ---------------- #
+
+BANK_ACCOUNT_INFO = """
+🏦 Bank Name: Commercial Bank
+👤 Account Name: Training Center
+🔢 Account Number: 1234567890
+
+After payment, please send your receipt here.
+"""
 
 # ---------------- HANDLERS ---------------- #
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    user_data_store[user_id] = {}
+    keyboard = [
+        [InlineKeyboardButton("📝 Register", callback_data="register")]
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        "🎓 Training Registration\n\n"
-        "1️⃣ Pay registration fee\n"
-        "2️⃣ Send FULL NAME\n"
-        "3️⃣ Send PHONE NUMBER\n"
-        "4️⃣ Send receipt photo\n\n"
-        "Send your FULL NAME now."
+        "🎓 Welcome to Training Registration\n\n"
+        "To complete your registration:\n"
+        "1️⃣ Click Register\n"
+        "2️⃣ Enter your details\n"
+        "3️⃣ Pay the fee\n"
+        "4️⃣ Send receipt\n\n"
+        "Press the button below to begin.",
+        reply_markup=reply_markup
     )
 
-async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    await update.message.reply_text(
-        f"Your Telegram ID is: {update.effective_user.id}"
-    )
+
+async def register_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    context.user_data.clear()
+    context.user_data["step"] = "name"
+
+    await query.message.reply_text("Please enter your FULL NAME.")
+
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    user_id = update.effective_user.id
-    text = update.message.text
+    step = context.user_data.get("step")
 
-    if user_id not in user_data_store:
-        await update.message.reply_text("Press /start first.")
+    if step == "name":
+        context.user_data["name"] = update.message.text
+        context.user_data["step"] = "phone"
+        await update.message.reply_text("Now enter your PHONE NUMBER.")
         return
 
-    if "name" not in user_data_store[user_id]:
-        user_data_store[user_id]["name"] = text
-        await update.message.reply_text("Now send your PHONE NUMBER.")
+    if step == "phone":
+        context.user_data["phone"] = update.message.text
+        context.user_data["step"] = "payment"
+
+        await update.message.reply_text(
+            "💳 Please send the registration fee to the account below:\n\n"
+            + BANK_ACCOUNT_INFO
+        )
         return
 
-    if "phone" not in user_data_store[user_id]:
-        user_data_store[user_id]["phone"] = text
-        await update.message.reply_text("Now send receipt PHOTO.")
-        return
 
 async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    step = context.user_data.get("step")
+
+    if step != "payment":
+        return
+
+    name = context.user_data.get("name")
+    phone = context.user_data.get("phone")
     user_id = update.effective_user.id
-
-    if user_id not in user_data_store:
-        return
-
-    data = user_data_store[user_id]
-
-    if "name" not in data or "phone" not in data:
-        await update.message.reply_text("Send name and phone first.")
-        return
 
     caption = (
         "📥 New Registration\n\n"
-        f"👤 Name: {data['name']}\n"
-        f"📞 Phone: {data['phone']}\n"
+        f"👤 Name: {name}\n"
+        f"📞 Phone: {phone}\n"
         f"🆔 Telegram ID: {user_id}"
     )
 
@@ -93,16 +115,28 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
             caption=caption
         )
 
-        await update.message.reply_text("✅ Registration submitted successfully.")
-        del user_data_store[user_id]
+        await update.message.reply_text(
+            "✅ Your registration has been successfully submitted.\n"
+            "Our team will review your payment shortly."
+        )
+
+        context.user_data.clear()
 
     except Exception as e:
         logging.error(f"Error sending to admin: {e}")
+        await update.message.reply_text("❌ Something went wrong. Please try again.")
+
+
+async def get_id(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    await update.message.reply_text(
+        f"Your Telegram ID is: {update.effective_user.id}"
+    )
 
 # ---------------- ADD HANDLERS ---------------- #
 
 telegram_app.add_handler(CommandHandler("start", start))
 telegram_app.add_handler(CommandHandler("id", get_id))
+telegram_app.add_handler(CallbackQueryHandler(register_button, pattern="register"))
 telegram_app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_text))
 telegram_app.add_handler(MessageHandler(filters.PHOTO, handle_photo))
 
