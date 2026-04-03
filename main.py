@@ -34,13 +34,12 @@ asyncio.set_event_loop(loop)
 # ---------------- CONFIG ---------------- #
 
 BANK_ACCOUNT_INFO = """
-🏦 Bank Name: Commercial Bank
-👤 Account Name: Training Center
-🔢 Account Number: 1234567890
+🏦 Bank Name: Commercial Bank Of Ethiopia
+👤 Account Name: Animut Abebaw Ferede
+🔢 Account Number: 1000086508967
 
 After payment, please send your receipt here.
-"""
-
+""" 
 # ---------------- HANDLERS ---------------- #
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -50,13 +49,13 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     reply_markup = InlineKeyboardMarkup(keyboard)
 
     await update.message.reply_text(
-        "🎓 Welcome to Training Registration\n\n"
-        "To complete your registration:\n"
-        "1️⃣ Click Register\n"
-        "2️⃣ Enter your details\n"
-        "3️⃣ Pay the fee\n"
-        "4️⃣ Send receipt\n\n"
-        "Press the button below to begin.",
+        "🎓 ወደ ሥልጠና ምዝገባ እንኳን ደህና መጡ\n\n"
+        "ምዝገባዎን ለማጠናቀቅ የሚከተሉትን ይከተሉ:\n"
+        "1️⃣ ተመዝገብ (Register) የሚለውን ይጫኑ\n"
+        "2️⃣ ዝርዝር መረጃዎን ያስገቡ\n"
+        "3️⃣ ክፍያውን ይፈጽሙ\n"
+        "4️⃣ የክፍያ ደረሰኝ ይላኩ\n\n"
+        "​ለመጀመር ከታች ያለውን ቁልፍ ይጫኑ።",
         reply_markup=reply_markup
     )
 
