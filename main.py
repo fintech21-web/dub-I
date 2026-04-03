@@ -34,9 +34,9 @@ asyncio.set_event_loop(loop)
 # ---------------- CONFIG ---------------- #
 
 BANK_ACCOUNT_INFO = """
-🏦 Bank Name: Commercial Bank Of Ethiopia
-👤 Account Name: Animut Abebaw Ferede
-🔢 Account Number: 1000086508967
+🏦 የባንክ ስም: ንግድ ባንክ
+👤 የአካዉንት ስም: አንሙት አበባዉ ፈረደ
+🔢 የአካዉንት ቁጥር: 1000086508967
 
 After payment, please send your receipt here.
 """ 
@@ -67,7 +67,7 @@ async def register_button(update: Update, context: ContextTypes.DEFAULT_TYPE):
     context.user_data.clear()
     context.user_data["step"] = "name"
 
-    await query.message.reply_text("Please enter your FULL NAME.")
+    await query.message.reply_text("እባክዎን ሙሉ ስምዎን ያስገቡ።")
 
 
 async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -76,7 +76,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if step == "name":
         context.user_data["name"] = update.message.text
         context.user_data["step"] = "phone"
-        await update.message.reply_text("Now enter your PHONE NUMBER.")
+        await update.message.reply_text("እባክዎን ስልክ ቁጥርዎን ያስገቡ።")
         return
 
     if step == "phone":
@@ -84,7 +84,7 @@ async def handle_text(update: Update, context: ContextTypes.DEFAULT_TYPE):
         context.user_data["step"] = "payment"
 
         await update.message.reply_text(
-            "💳 Please send the registration fee to the account below:\n\n"
+            "💳 እባክዎን የመመዝገቢያ ክፍያ 500 ብር ከታች በተቀመጠዉ አካዉንት ያስገቡ:\n\n"
             + BANK_ACCOUNT_INFO
         )
         return
@@ -115,8 +115,8 @@ async def handle_photo(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
 
         await update.message.reply_text(
-            "✅ Your registration has been successfully submitted.\n"
-            "Our team will review your payment shortly."
+            "✅ ምዝገባዎ በስኬት ተጠናቋል።\n"
+            "ቡድናችን የከፈሉትን ክፍያ በአጭር ጊዜ ውስጥ አጣርቶ ያሳውቅዎታል።"
         )
 
         context.user_data.clear()
