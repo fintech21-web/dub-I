@@ -38,7 +38,7 @@ BANK_ACCOUNT_INFO = """
 👤 የአካዉንት ስም: አንሙት አበባዉ ፈረደ
 🔢 የአካዉንት ቁጥር: 1000086508967
 
-After payment, please send your receipt here.
+ክፍያውን እንደፈጸሙ፣ እባክዎ ደረሰኝዎን እዚህ ይላኩ.
 """ 
 # ---------------- HANDLERS ---------------- #
 
@@ -51,7 +51,7 @@ async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(
         "🎓 ወደ ሥልጠና ምዝገባ እንኳን ደህና መጡ\n\n"
         "ምዝገባዎን ለማጠናቀቅ የሚከተሉትን ይከተሉ:\n"
-        "1️⃣ ተመዝገብ (Register) የሚለውን ይጫኑ\n"
+        "1️⃣ ለመመዝገብ (Register) የሚለውን ይጫኑ\n"
         "2️⃣ ዝርዝር መረጃዎን ያስገቡ\n"
         "3️⃣ ክፍያውን ይፈጽሙ\n"
         "4️⃣ የክፍያ ደረሰኝ ይላኩ\n\n"
